@@ -18,7 +18,7 @@ from ldm.modules.diffusionmodules.util import (
 )
 
 # NOTE only change in file for Comyfui
-from attn import sr_get_attn_func as get_attn_func
+from .attn import sr_get_attn_func as get_attn_func
 
 attn_func = None
 
@@ -347,8 +347,8 @@ if __name__ == "__main__":
     model = build_unetwt()
     model.load_from_dict(state_dict)
     model = model.cuda()
-    test_latent = torch.randn(1, 4, 64, 64).half().cuda()
+    test_latent = torch.zeros(1, 4, 64, 64).half().cuda()
     test_timesteps = torch.tensor([0]).half().cuda()
     with torch.no_grad():
         test_result = model(test_latent, test_timesteps)
-    print(test_result.keys())
+    print(test_result)
