@@ -4,9 +4,9 @@ from .modules.util import pil2tensor, tensor2pil
 from .modules.colorfix import adain_color_fix, wavelet_color_fix
 
 import os
-import comfy.samplers
 from torch import Tensor
 import torch
+import comfy.sample
 
 import folder_paths
 model_path = folder_paths.models_dir
@@ -41,6 +41,18 @@ class StableSRColorFix:
         except Exception as e:
             print(f'[StableSR] Error fix_color: {e}')
 
+original_sample = comfy.sample.sample
+SAMPLE_X = None
+
+def hook_sample(*args, **kwargs):
+    global SAMPLE_X
+    if len(args) >=9 :
+        SAMPLE_X = args[8]
+    elif "latent_image" in kwargs:
+        SAMPLE_X = kwargs["latent_image"]
+    return original_sample(*args, **kwargs)
+
+comfy.sample.sample = hook_sample
 
 class StableSR:
     '''
@@ -68,16 +80,32 @@ class StableSR:
         self.set_image_hooks = {}
         self.struct_cond: Tensor = None
 
+        self.fix_latent_scale = True
+        self.auto_set_latent = False
+        self.last_t = 0.
+
     def set_latent_image(self, latent_image):
-        self.latent_image = latent_image["samples"]
-        for hook in self.set_image_hooks.values():
-            hook(latent_image)
+        self.latent_image = latent_image
+        if self.fix_latent_scale:
+            self.latent_image = self.latent_image * 0.18215
+
+    def set_fix_latent_scale(self, fix_latent_scale):
+        self.fix_latent_scale = fix_latent_scale
+
+    def set_auto_set_latent(self, auto_set_latent):
+        self.auto_set_latent = auto_set_latent
 
     def __call__(self, model_function, params):
         # explode packed args
         input_x = params.get("input")
         timestep = params.get("timestep")
         c = params.get("c")
+
+        if self.auto_set_latent:
+            tt = float(timestep[0])
+            if self.last_t <= tt:
+                self.set_latent_image(SAMPLE_X[:])
+            self.last_t = tt
 
         # set latent image to device
         device = input_x.device
@@ -101,14 +129,19 @@ class StableSR:
         # Return the result
         return result
 
+
 class ApplyStableSRUpscaler:
     @classmethod
     def INPUT_TYPES(s):
-        return {"required": {
-            "model": ("MODEL", ),
-            "latent_image": ("LATENT", ),
-            "stablesr_model": (folder_paths.get_filename_list("stablesr"), ),
-        }
+        return {
+            "required": {
+                "model": ("MODEL", ),
+                "stablesr_model": (folder_paths.get_filename_list("stablesr"), ),
+                "fix_latent_scale": ("BOOLEAN", {"default": True}), 
+            },
+            "optional": {
+                "latent_image": ("LATENT", ),
+            },
         }
 
     RETURN_TYPES = ("MODEL",)
@@ -116,15 +149,17 @@ class ApplyStableSRUpscaler:
     FUNCTION = "apply_stable_sr_upscaler"
     CATEGORY = "image/upscaling"
 
-    def apply_stable_sr_upscaler(self, model, latent_image,  stablesr_model):
-        latent_image = {"samples": latent_image["samples"] * 0.18215}
-
+    def apply_stable_sr_upscaler(self, model,  stablesr_model, fix_latent_scale, latent_image=None):
         stablesr_model_path = folder_paths.get_full_path("stablesr", stablesr_model)
         if not os.path.isfile(stablesr_model_path):
             raise Exception(f'[StableSR] Invalid StableSR model reference')
 
-        upscaler = StableSR(stablesr_model_path,dtype=torch.float32,device="cpu")
-        upscaler.set_latent_image(latent_image)
+        upscaler = StableSR(stablesr_model_path, dtype=torch.float32, device="cpu")
+        upscaler.set_fix_latent_scale(fix_latent_scale)
+        if latent_image != None:
+            upscaler.set_latent_image(latent_image["samples"])
+        else:
+            upscaler.set_auto_set_latent(True)
 
         model_sr = model.clone()
         model_sr.set_model_unet_function_wrapper(upscaler)
