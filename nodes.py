@@ -80,17 +80,11 @@ class StableSR:
         self.set_image_hooks = {}
         self.struct_cond: Tensor = None
 
-        self.fix_latent_scale = True
         self.auto_set_latent = False
         self.last_t = 0.
 
     def set_latent_image(self, latent_image):
         self.latent_image = latent_image
-        if self.fix_latent_scale:
-            self.latent_image = self.latent_image * 0.18215
-
-    def set_fix_latent_scale(self, fix_latent_scale):
-        self.fix_latent_scale = fix_latent_scale
 
     def set_auto_set_latent(self, auto_set_latent):
         self.auto_set_latent = auto_set_latent
@@ -104,7 +98,8 @@ class StableSR:
         if self.auto_set_latent:
             tt = float(timestep[0])
             if self.last_t <= tt:
-                self.set_latent_image(SAMPLE_X[:])
+                latent_image = model_function.__self__.process_latent_in(SAMPLE_X)
+                self.set_latent_image(latent_image)
             self.last_t = tt
 
         # set latent image to device
@@ -137,7 +132,6 @@ class ApplyStableSRUpscaler:
             "required": {
                 "model": ("MODEL", ),
                 "stablesr_model": (folder_paths.get_filename_list("stablesr"), ),
-                "fix_latent_scale": ("BOOLEAN", {"default": True}), 
             },
             "optional": {
                 "latent_image": ("LATENT", ),
@@ -149,15 +143,15 @@ class ApplyStableSRUpscaler:
     FUNCTION = "apply_stable_sr_upscaler"
     CATEGORY = "image/upscaling"
 
-    def apply_stable_sr_upscaler(self, model,  stablesr_model, fix_latent_scale, latent_image=None):
+    def apply_stable_sr_upscaler(self, model,  stablesr_model, latent_image=None):
         stablesr_model_path = folder_paths.get_full_path("stablesr", stablesr_model)
         if not os.path.isfile(stablesr_model_path):
             raise Exception(f'[StableSR] Invalid StableSR model reference')
 
         upscaler = StableSR(stablesr_model_path, dtype=torch.float32, device="cpu")
-        upscaler.set_fix_latent_scale(fix_latent_scale)
         if latent_image != None:
-            upscaler.set_latent_image(latent_image["samples"])
+            latent_image = model.model.process_latent_in(latent_image["samples"])
+            upscaler.set_latent_image(latent_image)
         else:
             upscaler.set_auto_set_latent(True)
 
