@@ -41,18 +41,22 @@ class StableSRColorFix:
         except Exception as e:
             print(f'[StableSR] Error fix_color: {e}')
 
+
 original_sample = comfy.sample.sample
 SAMPLE_X = None
 
+
 def hook_sample(*args, **kwargs):
     global SAMPLE_X
-    if len(args) >=9 :
+    if len(args) >= 9:
         SAMPLE_X = args[8]
     elif "latent_image" in kwargs:
         SAMPLE_X = kwargs["latent_image"]
     return original_sample(*args, **kwargs)
 
+
 comfy.sample.sample = hook_sample
+
 
 class StableSR:
     '''
@@ -123,6 +127,12 @@ class StableSR:
 
         # Return the result
         return result
+
+    def to(self, device):
+        if type(device) == torch.device:
+            self.struct_cond_model.apply(lambda x: x.to(device=device))
+            self.spade_layers.apply(lambda x: x.to(device=device))
+        return self
 
 
 class ApplyStableSRUpscaler:
