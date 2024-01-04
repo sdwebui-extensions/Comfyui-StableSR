@@ -1,24 +1,15 @@
-import math
 import torch
 import torch.nn as nn
 
-from ldm.modules.diffusionmodules.openaimodel import (
-    TimestepEmbedSequential, 
-    ResBlock, 
-    Downsample, 
-)
-
-from ldm.modules.diffusionmodules.util import (
-    conv_nd,
-    linear,
-    timestep_embedding,
-    checkpoint,
-    normalization,
-    zero_module,
-)
+from comfy.ldm.modules.diffusionmodules.openaimodel import (
+    Downsample, ResBlock, TimestepEmbedSequential)
+from comfy.ldm.modules.diffusionmodules.util import (checkpoint,
+                                                     timestep_embedding,
+                                                     zero_module)
 
 # NOTE only change in file for Comyfui
 from .attn import sr_get_attn_func as get_attn_func
+from .util import conv_nd, linear, normalization
 
 attn_func = None
 
@@ -271,7 +262,7 @@ class EncoderUNetModelWT(nn.Module):
         :param timesteps: a 1-D batch of timesteps.
         :return: an [N x K] Tensor of outputs.
         """
-        emb = self.time_embed(timestep_embedding(timesteps, self.model_channels))
+        emb = self.time_embed(timestep_embedding(timesteps, self.model_channels).to(x.dtype))
 
         result_list = []
         results = {}
@@ -303,7 +294,7 @@ class EncoderUNetModelWT(nn.Module):
         self.load_state_dict(filtered_dict)
 
 
-def build_unetwt() -> EncoderUNetModelWT:
+def build_unetwt(use_fp16=False) -> EncoderUNetModelWT:
     """
     Build a model from a state dict.
     :param state_dict: a dict of parameters.
@@ -323,7 +314,7 @@ def build_unetwt() -> EncoderUNetModelWT:
         conv_resample=True,
         dims=2,
         use_checkpoint=False,
-        use_fp16=False,
+        use_fp16=use_fp16,
         num_heads=4,
         num_head_channels=-1,
         num_heads_upsample=-1,

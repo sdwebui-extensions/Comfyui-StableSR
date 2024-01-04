@@ -4,11 +4,14 @@ Licensed under the CC BY-NC-SA 4.0 license (https://creativecommons.org/licenses
 """
 
 import re
+
 import torch
 import torch.nn as nn
 
-from ldm.modules.diffusionmodules.util import normalization, checkpoint
-from ldm.modules.diffusionmodules.openaimodel import ResBlock, UNetModel
+from comfy.ldm.modules.diffusionmodules.openaimodel import ResBlock, UNetModel
+from comfy.ldm.modules.diffusionmodules.util import checkpoint
+
+from .util import normalization
 
 
 class SPADE(nn.Module):
