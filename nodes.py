@@ -48,18 +48,12 @@ class StableSRColorFix:
     CATEGORY = "image"
 
     def fix_color(self, image, color_map_image, color_fix):
-        print(f"[StableSR] fix_color")
-        try:
-            color_fix_func = (
-                wavelet_color_fix if color_fix == "Wavelet" else adain_color_fix
-            )
-            result_image = color_fix_func(
-                tensor2pil(image), tensor2pil(color_map_image)
-            )
-            refined_image = pil2tensor(result_image)
-            return (refined_image,)
-        except Exception as e:
-            print(f"[StableSR] Error fix_color: {e}")
+        color_fix_func = (
+            wavelet_color_fix if color_fix == "Wavelet" else adain_color_fix
+        )
+        result_image = color_fix_func(tensor2pil(image), tensor2pil(color_map_image))
+        refined_image = pil2tensor(result_image)
+        return (refined_image,)
 
 
 original_sample = comfy.sample.sample

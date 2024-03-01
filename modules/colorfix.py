@@ -21,6 +21,8 @@ def adain_color_fix(target: Image, source: Image):
     return result_image
 
 def wavelet_color_fix(target: Image, source: Image):
+    source = source.resize(target.size, resample=Image.Resampling.LANCZOS)
+
     # Convert images to tensors
     to_tensor = ToTensor()
     target_tensor = to_tensor(target).unsqueeze(0)
