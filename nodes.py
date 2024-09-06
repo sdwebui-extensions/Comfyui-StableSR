@@ -11,18 +11,19 @@ from .modules.colorfix import adain_color_fix, wavelet_color_fix
 from .modules.spade import SPADELayers
 from .modules.struct_cond import EncoderUNetModelWT, build_unetwt
 from .modules.util import pil2tensor, tensor2pil
+import os
 
 model_path = folder_paths.models_dir
 folder_name = "stablesr"
-folder_path = os.path.join(
+_folder_paths = [os.path.join(
     model_path, "stablesr"
-)  # set a default path for the common comfyui model path
+)]  # set a default path for the common comfyui model path
 if folder_name in folder_paths.folder_names_and_paths:
-    folder_path = folder_paths.folder_names_and_paths[folder_name][0][
-        0
-    ]  # if a custom path was set in extra_model_paths.yaml then use it
+    _folder_paths = folder_paths.folder_names_and_paths[folder_name][0]# if a custom path was set in extra_model_paths.yaml then use it
+if os.path.exists(folder_paths.cache_dir):
+    _folder_paths.append(os.path.join(folder_paths, "stablesr"))
 folder_paths.folder_names_and_paths["stablesr"] = (
-    [folder_path],
+    _folder_paths,
     folder_paths.supported_pt_extensions,
 )
 
