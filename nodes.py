@@ -21,7 +21,7 @@ _folder_paths = [os.path.join(
 if folder_name in folder_paths.folder_names_and_paths:
     _folder_paths = folder_paths.folder_names_and_paths[folder_name][0]# if a custom path was set in extra_model_paths.yaml then use it
 if os.path.exists(folder_paths.cache_dir):
-    _folder_paths.append(os.path.join(folder_paths, "stablesr"))
+    _folder_paths.append(os.path.join(folder_paths.cache_dir, "stablesr"))
 folder_paths.folder_names_and_paths["stablesr"] = (
     _folder_paths,
     folder_paths.supported_pt_extensions,
